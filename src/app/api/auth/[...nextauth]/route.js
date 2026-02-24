@@ -1,8 +1,8 @@
 import { dbConnect } from "@/lib/dbConnect";
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from 'bcryptjs';
-
+import bcrypt from "bcryptjs";
+import GoogleProvider from "next-auth/providers/google";
 
 const userList = [
   { name: "hablu", password: "1234", secretCode: "1111" },
@@ -27,7 +27,6 @@ export const authOptions = {
           type: "password",
           placeholder: "enter Password",
         },
-
       },
       async authorize(credentials, req) {
         // login logic here----------->
@@ -35,39 +34,42 @@ export const authOptions = {
 
         // const user = userList.find(u=> u.name == username)
 
-        const user = await dbConnect("users").findOne({email});
-        if(!user) return null;
+        const user = await dbConnect("users").findOne({ email });
+        if (!user) return null;
 
         const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
-        if(isPasswordCorrect) {
-            return user
+        if (isPasswordCorrect) {
+          return user;
         }
         return null;
       },
     }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
   ],
   callbacks: {
-  async signIn({ user, account, profile, email, credentials }) {
-    return true
-  },
-//   async redirect({ url, baseUrl }) {
-//     return baseUrl
-//   },
-  async session({ session, token, user }) {
-    if(token){
+    async signIn({ user, account, profile, email, credentials }) {
+      return true;
+    },
+    //   async redirect({ url, baseUrl }) {
+    //     return baseUrl
+    //   },
+    async session({ session, token, user }) {
+      if (token) {
         session.role = token.role;
-    }
-    return session
+      }
+      return session;
+    },
+    async jwt({ token, user, account, profile, isNewUser }) {
+      if (user) {
+        ((token.email = user.email), (token.role = user.role));
+      }
+      return token;
+    },
   },
-  async jwt({ token, user, account, profile, isNewUser }) {
-    if(user){
-        token.email = user.email,
-        token.role = user.role
-    }
-    return token
-  }
-}
 };
 
 const handler = NextAuth(authOptions);
