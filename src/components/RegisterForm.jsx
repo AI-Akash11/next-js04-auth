@@ -2,7 +2,7 @@
 
 import { postUser } from "@/actions/server/auth";
 
-const RegisterForm =  () => {
+const RegisterForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -19,8 +19,7 @@ const RegisterForm =  () => {
 
     const result = await postUser(formData);
 
-    alert(result.message)
-
+    alert(result.message);
   };
 
   const inputClass =
