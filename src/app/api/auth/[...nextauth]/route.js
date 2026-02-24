@@ -1,5 +1,8 @@
+import { dbConnect } from "@/lib/dbConnect";
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from 'bcryptjs';
+
 
 const userList = [
   { name: "hablu", password: "1234", secretCode: "1111" },
@@ -14,40 +17,57 @@ export const authOptions = {
       name: "Email and Password",
 
       credentials: {
-        username: {
-          label: "Username",
-          type: "text",
-          placeholder: "enter Name",
+        email: {
+          label: "Email",
+          type: "email",
+          placeholder: "enter Email",
         },
         password: {
           label: "Password",
           type: "password",
           placeholder: "enter Password",
         },
-        secretCode: {
-          label: "secret Code",
-          type: "number",
-          placeholder: "enter Code",
-        },
+
       },
       async authorize(credentials, req) {
         // login logic here----------->
-        const { username, password, secretCode } = credentials;
+        const { email, password } = credentials;
 
-        const user = userList.find(u=> u.name == username)
+        // const user = userList.find(u=> u.name == username)
+
+        const user = await dbConnect("users").findOne({email});
         if(!user) return null;
 
-        const isPasswordCorrect = user.password == password;
-        if(!isPasswordCorrect) return null;
+        const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
-        const isSecretCorrect = user.secretCode == secretCode;
-        if (isSecretCorrect) {
+        if(isPasswordCorrect) {
             return user
         }
         return null;
       },
     }),
   ],
+  callbacks: {
+  async signIn({ user, account, profile, email, credentials }) {
+    return true
+  },
+  async redirect({ url, baseUrl }) {
+    return baseUrl
+  },
+  async session({ session, token, user }) {
+    if(token){
+        session.role = token.role;
+    }
+    return session
+  },
+  async jwt({ token, user, account, profile, isNewUser }) {
+    if(user){
+        token.email = user.email,
+        token.role = user.role
+    }
+    return token
+  }
+}
 };
 
 const handler = NextAuth(authOptions);
